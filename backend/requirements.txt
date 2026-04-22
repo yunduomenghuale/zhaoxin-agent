@@ -1,0 +1,9 @@
+django>=4.2,<5.0
+djangorestframework>=3.14
+django-cors-headers>=4.3
+langchain>=0.1.0
+langchain-community>=0.0.10
+langchain-openai>=0.0.2
+python-dotenv>=1.0.0
+python-docx>=1.1.0
+docx2txt>=0.3
