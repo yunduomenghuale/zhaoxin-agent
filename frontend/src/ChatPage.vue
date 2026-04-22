@@ -79,8 +79,8 @@
                 </div>
 
               <div v-if="msg.role === 'assistant' && currentMessages.indexOf(msg) === 0" class="preset-card-list">
-                <div v-for="q in presetQuestions" :key="q" class="preset-list-item" @click="sendPreset(q)">
-                  <span>{{ q }}</span>
+                <div v-for="(q, idx) in presetQuestions" :key="idx" class="preset-list-item" @click="sendPreset(q)">
+                  <span>{{ typeof q === 'string' ? q : q.question }}</span>
                 </div>
               </div>
             </div>
@@ -206,11 +206,6 @@ export default {
           }
           
           const greeting = data.system_greeting || '你好！我是迎新智能助手，很高兴为你服务。你可以问我关于学校概况、专业介绍、宿舍环境等问题。'
-          // Update first message if it's a default greeting
-          if (this.currentMessages.length > 0 && this.currentMessages[0].role === 'assistant' && idx === 0) {
-              // This part is tricky if they already started a chat. 
-              // Usually we only want to update the VERY FIRST greeting if it hasn't been changed.
-          }
           
           // Simplified: Just update the reference for future chats and the first message of current chat if it matches a default pattern
           if (this.currentMessages.length === 1 && this.currentMessages[0].role === 'assistant') {
@@ -406,7 +401,40 @@ export default {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }).from(tempDiv).save()
     },
-    sendPreset(q) { this.inputText = q; this.sendMessage() },
+    async sendPreset(q) {
+      const question = typeof q === 'string' ? q : q.question
+      const answer = typeof q === 'object' ? q.answer : null
+
+      if (answer && answer.trim()) {
+        let chat = this.currentChat
+        if (!chat) {
+          this.createNewChat()
+          chat = this.currentChat
+        }
+        
+        // Update chat title if it's still the default
+        if (chat.title === '新对话') {
+          chat.title = question.length > 12 ? question.slice(0, 12) + '...' : question
+        }
+
+        chat.messages.push({ role: 'user', content: question })
+        this.isTyping = true
+        this.typingText = ''
+        
+        const assistantMsg = { role: 'assistant', content: '', feedback: null }
+        chat.messages.push(assistantMsg)
+        this.scrollToBottom()
+        
+        await this.typeWriter(answer)
+        assistantMsg.content = answer
+        this.isTyping = false
+        this.saveToStorage()
+        this.scrollToBottom()
+      } else {
+        this.inputText = question
+        this.sendMessage()
+      }
+    },
     scrollToBottom() {
       this.$nextTick(() => {
         const c = this.$refs.messagesContainer
@@ -526,13 +554,13 @@ export default {
 .sidebar {
   width: var(--sidebar-width);
   background: var(--sidebar-bg);
-  backdrop-filter: blur(20px);
   color: #f1f5f9;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
   transition: var(--transition);
   z-index: 100;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.1);
 }
 
 .chat-main {
@@ -545,13 +573,13 @@ export default {
 .sidebar {
   width: var(--sidebar-width);
   background: var(--sidebar-bg);
-  backdrop-filter: blur(20px);
   color: #f1f5f9;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
   transition: var(--transition);
   z-index: 100;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.1);
 }
 
 .sidebar-header {
@@ -631,8 +659,9 @@ export default {
 }
 
 .chat-item.active {
-  background: rgba(99, 102, 241, 0.15);
-  color: #818cf8;
+  background: var(--primary-gradient);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2);
 }
 
 .chat-title {
@@ -805,8 +834,9 @@ export default {
 
 .assistant-bubble {
   color: #1e293b;
-  padding: 8px 0;
+  padding: 12px 0;
   position: relative;
+  line-height: 1.8;
 }
 
 .typing-bubble {
@@ -919,10 +949,10 @@ export default {
   max-width: 1000px;
   margin: 0 auto;
   background: #fff;
-  border-radius: 28px;
-  border: 1.5px solid #e2e8f0;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04), 0 2px 10px rgba(99, 102, 241, 0.03);
-  padding: 10px 16px 10px 24px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06);
+  padding: 12px 16px 12px 24px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: row;

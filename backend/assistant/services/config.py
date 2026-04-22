@@ -14,7 +14,12 @@ def get_system_config():
                 if 'assistant_avatar' not in config: config['assistant_avatar'] = '/avatar.png'
                 if 'system_subtitle' not in config: config['system_subtitle'] = '平顶山工业职业技术学院招生问答'
                 if 'system_footer' not in config: config['system_footer'] = '© 平顶山工业职业技术学院'
-                if 'welcome_questions' not in config: config['welcome_questions'] = ['什么是单招?', '宿舍环境怎么样?', '有哪些特色专业?', '学费标准是多少?']
+                if 'welcome_questions' not in config: config['welcome_questions'] = [
+                    {'question': '什么是单招?', 'answer': ''},
+                    {'question': '宿舍环境怎么样?', 'answer': ''},
+                    {'question': '有哪些特色专业?', 'answer': ''},
+                    {'question': '学费标准是多少?', 'answer': ''}
+                ]
                 if 'system_greeting' not in config: config['system_greeting'] = '你好！我是迎新智能助手，很高兴为你服务。你可以问我关于学校概况、专业介绍、宿舍环境等问题。'
                 return config
         except:
@@ -24,7 +29,12 @@ def get_system_config():
         'assistant_avatar': '/avatar.png',
         'system_subtitle': '平顶山工业职业技术学院招生问答',
         'system_footer': '© 平顶山工业职业技术学院',
-        'welcome_questions': ['什么是单招?', '宿舍环境怎么样?', '有哪些特色专业?', '学费标准是多少?'],
+        'welcome_questions': [
+            {'question': '什么是单招?', 'answer': ''},
+            {'question': '宿舍环境怎么样?', 'answer': ''},
+            {'question': '有哪些特色专业?', 'answer': ''},
+            {'question': '学费标准是多少?', 'answer': ''}
+        ],
         'system_greeting': '你好！我是迎新智能助手，很高兴为你服务。你可以问我关于学校概况、专业介绍、宿舍环境等问题。'
     }
 

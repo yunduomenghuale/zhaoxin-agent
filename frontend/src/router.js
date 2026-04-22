@@ -14,4 +14,34 @@ const router = createRouter({
   routes,
 })
 
+router.beforeEach(async (to, from, next) => {
+  if (to.path.startsWith('/admin') && to.path !== '/admin/login') {
+    try {
+      const res = await fetch('/api/admin/check')
+      const data = await res.json()
+      if (data.logged_in) {
+        next()
+      } else {
+        next('/admin/login')
+      }
+    } catch (e) {
+      next('/admin/login')
+    }
+  } else if (to.path === '/admin/login') {
+    try {
+      const res = await fetch('/api/admin/check')
+      const data = await res.json()
+      if (data.logged_in) {
+        next('/admin')
+      } else {
+        next()
+      }
+    } catch (e) {
+      next()
+    }
+  } else {
+    next()
+  }
+})
+
 export default router

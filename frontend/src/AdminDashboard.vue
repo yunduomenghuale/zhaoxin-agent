@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-layout">
+  <div v-if="currentUser" class="admin-layout">
     <div class="admin-sidebar">
       <div class="admin-sidebar-header">
         <img :src="systemSettings.assistant_avatar || '/avatar.png'" alt="logo" class="admin-logo" @error="e => e.target.src='https://api.dicebear.com/7.x/bottts/svg?seed=Enrollee&backgroundColor=6366f1'" />
@@ -185,7 +185,7 @@
 
               <div v-if="editingDoc" class="form-group">
                 <label>内容</label>
-                <textarea v-model="knowledgeForm.content" rows="10" placeholder="请输入文档内容"></textarea>
+                <textarea v-model="knowledgeForm.content" placeholder="请输入文档内容" @input="autoResize" class="auto-height-textarea" style="min-height: 200px;"></textarea>
               </div>
 
               <div class="form-group">
@@ -296,7 +296,7 @@
                   <td>{{ p.updated_at }}</td>
                   <td class="action-cell">
                     <button v-if="!p.is_active" class="activate-btn" @click="activatePrompt(p.id)">激活</button>
-                    <button class="edit-btn" @click="editingPrompt = p; showPromptForm = true; promptForm = { name: p.name, content: p.content, is_active: p.is_active }">编辑</button>
+                    <button class="edit-btn" @click="editingPrompt = p; showPromptForm = true; promptForm = { name: p.name, content: p.content, is_active: p.is_active }; triggerAllAutoResize()">编辑</button>
                     <button class="delete-btn" @click="deletePrompt(p.id)">删除</button>
                   </td>
                 </tr>
@@ -314,7 +314,7 @@
               </div>
               <div class="form-group">
                 <label>内容</label>
-                <textarea v-model="promptForm.content" rows="12" placeholder="请输入提示词内容"></textarea>
+                <textarea v-model="promptForm.content" placeholder="请输入提示词内容" @input="autoResize" class="auto-height-textarea" style="min-height: 300px;"></textarea>
               </div>
               <div class="form-group">
                 <label>是否激活（激活后将作为当前使用的系统提示词）</label>
@@ -339,7 +339,7 @@
             <div class="settings-main-card">
               <div class="settings-header">
                 <div class="settings-header-icon">
-                  <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                 </div>
                 <div>
                   <h3>对话管理</h3>
@@ -352,31 +352,39 @@
                   <div class="beauty-form-group">
                     <label style="font-size: 16px;"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg> 招呼语（机器人开场白）</label>
                     <div class="input-wrapper" style="margin-top: 12px;">
-                      <textarea v-model="systemSettings.system_greeting" rows="3" placeholder="输入助手发送的第一句话..." style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; font-family: inherit; resize: vertical;"></textarea>
+                      <textarea v-model="systemSettings.system_greeting" placeholder="输入助手发送的第一句话..." @input="autoResize" class="auto-height-textarea" style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; font-family: inherit;"></textarea>
                     </div>
                   </div>
 
-                  <div class="beauty-form-group" style="margin-top: 40px;">
+                  <div class="beauty-form-group" style="margin-top: 24px;">
                     <label style="font-size: 16px;"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> 预设问题（欢迎语快捷提问）</label>
                     <div class="welcome-questions-list" style="margin-top: 20px;">
-                      <div v-for="(q, index) in systemSettings.welcome_questions" :key="index" class="question-input-item">
-                        <div class="input-wrapper">
-                          <input v-model="systemSettings.welcome_questions[index]" type="text" :placeholder="'问题 ' + (index + 1)" />
+                      <div v-for="(q, index) in systemSettings.welcome_questions" :key="index" class="question-input-card-item">
+                        <div class="q-item-header">
+                          <span class="q-item-index">引导项 #{{ index + 1 }}</span>
+                          <button class="remove-q-btn-beauty" @click="systemSettings.welcome_questions.splice(index, 1)" title="删除此项">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                          </button>
                         </div>
-                        <button class="remove-q-btn" @click="systemSettings.welcome_questions.splice(index, 1)" title="删除问题">
-                          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </button>
+                        <div class="q-item-body">
+                          <div class="input-wrapper">
+                            <input v-model="systemSettings.welcome_questions[index].question" type="text" placeholder="输入引导性问题内容..." />
+                          </div>
+                          <div class="input-wrapper" style="margin-top: 10px;">
+                            <textarea v-model="systemSettings.welcome_questions[index].answer" placeholder="预设回答内容 (可选，填入后将立即回复此内容)" @input="autoResize" class="auto-height-textarea"></textarea>
+                          </div>
+                        </div>
                       </div>
-                      <button v-if="systemSettings.welcome_questions.length < 6" class="add-q-btn" @click="systemSettings.welcome_questions.push('')">
+                      <button v-if="systemSettings.welcome_questions.length < 6" class="add-q-btn" @click="systemSettings.welcome_questions.push({ question: '', answer: '' }); triggerAllAutoResize()">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        添加预设问题
+                        添加预设问题与快速回答
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div class="settings-footer" style="border-top: 1px solid #f1f5f9; padding-top: 30px;">
+              <div class="settings-footer" style="border-top: 1px solid #f1f5f9; padding-top: 20px;">
                 <button class="beauty-save-btn" @click="saveSystemSettings" :disabled="loading">
                   <span v-if="!loading">保存对话配置</span>
                   <div v-else class="btn-spinner"></div>
@@ -391,7 +399,7 @@
             <div class="settings-main-card">
               <div class="settings-header">
                 <div class="settings-header-icon">
-                  <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
                 </div>
                 <div>
                   <h3>品牌形象设置</h3>
@@ -554,6 +562,13 @@ export default {
       return titles[this.activeTab] || ''
     },
   },
+  watch: {
+    activeTab(val) {
+      if (['questions', 'brand', 'knowledge', 'prompts'].includes(val)) {
+        this.triggerAllAutoResize()
+      }
+    }
+  },
   async mounted() {
     await this.checkLogin()
     await this.loadUsers()
@@ -656,8 +671,16 @@ export default {
         const res = await fetch('/api/admin/settings')
         const data = await res.json()
         if (res.ok) {
+          // Migrate welcome_questions if they are strings
+          if (data.welcome_questions && Array.isArray(data.welcome_questions)) {
+            data.welcome_questions = data.welcome_questions.map(q => {
+              if (typeof q === 'string') return { question: q, answer: '' }
+              return q
+            })
+          }
           this.systemSettings = data
           this.updateFavicon()
+          this.triggerAllAutoResize()
         }
       } catch (e) {}
     },
@@ -691,7 +714,11 @@ export default {
         formData.append('assistant_name', this.systemSettings.assistant_name)
         formData.append('assistant_subtitle', this.systemSettings.system_subtitle)
         formData.append('assistant_footer', this.systemSettings.system_footer)
-        formData.append('welcome_questions', JSON.stringify(this.systemSettings.welcome_questions.filter(q => q.trim() !== '')))
+        const validQuestions = this.systemSettings.welcome_questions.filter(q => {
+          if (typeof q === 'string') return q.trim() !== ''
+          return q.question && q.question.trim() !== ''
+        })
+        formData.append('welcome_questions', JSON.stringify(validQuestions))
         formData.append('system_greeting', this.systemSettings.system_greeting)
         if (this.selectedAvatarFile) {
           formData.append('assistant_avatar', this.selectedAvatarFile)
@@ -704,6 +731,7 @@ export default {
         const data = await res.json()
         if (res.ok) {
           this.systemSettings = data
+          this.selectedAvatarFile = null
           this.updateFavicon()
           alert('设置保存成功')
         }
@@ -847,6 +875,18 @@ export default {
         this.formError = '网络连接失败'
       }
     },
+    autoResize(e) {
+      const el = e.target || e;
+      if (!el || !el.style) return;
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+    },
+    triggerAllAutoResize() {
+      this.$nextTick(() => {
+        const textareas = document.querySelectorAll('.auto-height-textarea');
+        textareas.forEach(ta => this.autoResize(ta));
+      });
+    },
     async deletePrompt(id) {
       if (!confirm('确定删除该提示词？')) return
       try {
@@ -939,12 +979,14 @@ export default {
 .admin-sidebar {
   width: var(--sidebar-width);
   background: var(--sidebar-bg);
-  backdrop-filter: blur(20px);
   color: #f1f5f9;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
   transition: var(--transition);
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 20;
 }
 
 
@@ -983,39 +1025,32 @@ export default {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  border-radius: 12px;
+  padding: 14px 18px;
+  border-radius: 14px;
   font-size: 14px;
   font-weight: 500;
   color: #94a3b8;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  overflow: hidden;
+  margin: 2px 0;
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
   transform: translateX(4px);
 }
 
 .nav-item.active {
-  background: rgba(99, 102, 241, 0.15);
-  color: #818cf8;
-  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.2);
+  background: var(--primary-gradient);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
+  font-weight: 600;
 }
 
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 15%;
-  height: 70%;
-  width: 4px;
-  background: var(--primary);
-  border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 12px var(--primary);
+.nav-item.active svg {
+  filter: drop-shadow(0 0 4px rgba(255,255,255,0.4));
 }
 
 .sidebar-divider {
@@ -1042,10 +1077,10 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--card-bg);
+  background: white;
   border-bottom: 1px solid var(--border);
   z-index: 10;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
 }
 
 
@@ -1098,16 +1133,16 @@ export default {
   background: var(--primary-gradient);
   color: white;
   border: none;
-  padding: 10px 24px;
-  border-radius: var(--radius-md);
+  padding: 12px 28px;
+  border-radius: 14px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: var(--transition);
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+  gap: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
 }
 
 .primary-btn:hover {
@@ -1158,11 +1193,11 @@ export default {
 }
 
 .data-table {
-  background: var(--card-bg);
-  border-radius: 20px;
-  border: 1px solid var(--border);
+  background: white;
+  border-radius: 24px;
+  border: 1px solid rgba(0,0,0,0.05);
   overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.03);
 }
 
 table {
@@ -1171,22 +1206,23 @@ table {
 }
 
 th {
-  padding: 20px 24px;
+  padding: 24px;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-light);
   text-align: left;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
+  background: #f8fafc;
+  border-bottom: 1px solid #f1f5f9;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 td {
-  padding: 20px 24px;
+  padding: 22px 24px;
   font-size: 14px;
   color: var(--text-main);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.2s;
 }
 
 tr:hover td {
@@ -1830,13 +1866,14 @@ tr:hover td {
 .settings-main-card {
   background: white;
   border-radius: 24px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.03), 0 4px 20px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.04);
   overflow: hidden;
+  transition: transform 0.3s ease;
 }
 
 .settings-header {
-  padding: 32px;
+  padding: 20px 32px;
   background: #f8fafc;
   border-bottom: 1px solid #f1f5f9;
   display: flex;
@@ -1845,15 +1882,15 @@ tr:hover td {
 }
 
 .settings-header-icon {
-  width: 56px;
-  height: 56px;
-  background: var(--primary-soft);
-  color: var(--primary);
-  border-radius: 16px;
+  width: 48px;
+  height: 48px;
+  background: var(--primary-gradient);
+  color: white;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.2);
 }
 
 .settings-header h3 {
@@ -1873,11 +1910,11 @@ tr:hover td {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
   gap: 40px;
-  padding: 40px;
+  padding: 24px 40px;
 }
 
 .beauty-form-group {
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
 .beauty-form-group label {
@@ -1894,22 +1931,25 @@ tr:hover td {
   position: relative;
 }
 
-.beauty-form-group input {
+.beauty-form-group textarea, .beauty-form-group input {
   width: 100%;
-  padding: 14px 18px;
+  padding: 12px 20px;
   background: #f8fafc;
   border: 2px solid transparent;
   border-radius: 14px;
   font-size: 15px;
+  line-height: 1.5;
   color: var(--text-main);
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
 }
 
-.beauty-form-group input:focus {
+.beauty-form-group textarea:focus, .beauty-form-group input:focus {
   background: white;
-  border-color: var(--primary-soft);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08);
+  border-color: var(--primary-light);
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.08);
   outline: none;
+  transform: translateY(-2px);
 }
 
 .settings-avatar-section {
@@ -1988,7 +2028,7 @@ tr:hover td {
 }
 
 .settings-footer {
-  padding: 32px 40px;
+  padding: 20px 40px;
   background: #f8fafc;
   display: flex;
   justify-content: center;
@@ -2037,28 +2077,43 @@ tr:hover td {
   }
 }
 
-/* Welcome Questions Styles */
-.welcome-questions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.question-input-card-item {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
 }
 
-.question-input-item {
+.question-input-card-item:hover {
+  border-color: var(--primary-light);
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.q-item-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #e2e8f0;
 }
 
-.question-input-item .input-wrapper {
-  flex: 1;
+.q-item-index {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.remove-q-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid #fee2e2;
+.remove-q-btn-beauty {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
   background: #fef2f2;
   color: #ef4444;
   display: flex;
@@ -2068,9 +2123,34 @@ tr:hover td {
   transition: all 0.2s ease;
 }
 
-.remove-q-btn:hover {
+.remove-q-btn-beauty:hover {
   background: #fee2e2;
-  transform: scale(1.05);
+  color: #dc2626;
+  transform: scale(1.1);
+}
+
+.q-item-body .input-wrapper input {
+  width: 100%;
+  padding: 10px 14px !important;
+  background: white !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+}
+
+.q-item-body .input-wrapper textarea {
+  width: 100%;
+  padding: 10px 14px !important;
+  background: white !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+  resize: none;
+}
+
+.q-item-body .input-wrapper input:focus, .q-item-body .input-wrapper textarea:focus {
+  border-color: var(--primary) !important;
+  outline: none;
 }
 
 .add-q-btn {
@@ -2080,19 +2160,27 @@ tr:hover td {
   gap: 8px;
   padding: 12px;
   border: 2px dashed #e2e8f0;
-  background: #f8fafc;
-  color: var(--text-light);
-  border-radius: 14px;
+  background: #fcfdfe;
+  color: #64748b;
+  border-radius: 16px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-top: 8px;
 }
 
 .add-q-btn:hover {
-  border-color: var(--primary-soft);
+  border-color: var(--primary);
   color: var(--primary);
   background: white;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.05);
+}
+.auto-height-textarea {
+  overflow: hidden;
+  resize: none;
+  min-height: 46px;
+  line-height: 1.6;
 }
 </style>

@@ -563,4 +563,7 @@ class SystemSettingsView(APIView):
             
         from assistant.services.config import update_system_config
         config = update_system_config(name=name, avatar_url=avatar_url, subtitle=subtitle, footer=footer, welcome_questions=welcome_questions, greeting=greeting)
+        # Make avatar URL absolute for immediate frontend update
+        if config['assistant_avatar'] and config['assistant_avatar'].startswith('/media/'):
+             config['assistant_avatar'] = request.build_absolute_uri(config['assistant_avatar'])
         return Response(config)
