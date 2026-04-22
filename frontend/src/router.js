@@ -4,7 +4,8 @@ import AdminLogin from './AdminLogin.vue'
 import AdminDashboard from './AdminDashboard.vue'
 
 const routes = [
-  { path: '/', name: 'chat', component: ChatPage },
+  { path: '/', redirect: '/chat' },
+  { path: '/chat', name: 'chat', component: ChatPage },
   { path: '/admin/login', name: 'admin-login', component: AdminLogin },
   { path: '/admin', name: 'admin-dashboard', component: AdminDashboard },
 ]

@@ -21,6 +21,10 @@ def get_system_config():
                     {'question': '学费标准是多少?', 'answer': ''}
                 ]
                 if 'system_greeting' not in config: config['system_greeting'] = '你好！我是迎新智能助手，很高兴为你服务。你可以问我关于学校概况、专业介绍、宿舍环境等问题。'
+                if 'llm_model' not in config: config['llm_model'] = 'qwen-plus'
+                if 'llm_api_key' not in config: config['llm_api_key'] = ''
+                if 'llm_provider' not in config: config['llm_provider'] = 'aliyun'
+                if 'llm_base_url' not in config: config['llm_base_url'] = ''
                 return config
         except:
             pass
@@ -35,10 +39,14 @@ def get_system_config():
             {'question': '有哪些特色专业?', 'answer': ''},
             {'question': '学费标准是多少?', 'answer': ''}
         ],
-        'system_greeting': '你好！我是迎新智能助手，很高兴为你服务。你可以问我关于学校概况、专业介绍、宿舍环境等问题。'
+        'system_greeting': '你好！我是迎新智能助手，很高兴为你服务。你可以问我关于学校概况、专业介绍、宿舍环境等问题。',
+        'llm_model': 'qwen-plus',
+        'llm_api_key': '',
+        'llm_provider': 'aliyun',
+        'llm_base_url': ''
     }
 
-def update_system_config(name=None, avatar_url=None, subtitle=None, footer=None, welcome_questions=None, greeting=None):
+def update_system_config(name=None, avatar_url=None, subtitle=None, footer=None, welcome_questions=None, greeting=None, llm_model=None, llm_api_key=None, llm_provider=None, llm_base_url=None):
     config = get_system_config()
     if name is not None:
         config['assistant_name'] = name
@@ -52,6 +60,14 @@ def update_system_config(name=None, avatar_url=None, subtitle=None, footer=None,
         config['welcome_questions'] = welcome_questions
     if greeting is not None:
         config['system_greeting'] = greeting
+    if llm_model is not None:
+        config['llm_model'] = llm_model
+    if llm_api_key is not None:
+        config['llm_api_key'] = llm_api_key
+    if llm_provider is not None:
+        config['llm_provider'] = llm_provider
+    if llm_base_url is not None:
+        config['llm_base_url'] = llm_base_url
         
     os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:

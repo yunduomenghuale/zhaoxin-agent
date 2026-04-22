@@ -5,7 +5,8 @@ from .views import (
     KnowledgeDocumentListView, KnowledgeDocumentDetailView,
     SystemPromptListView, SystemPromptDetailView, SystemPromptActivateView,
     KnowledgeImageListView, KnowledgeImageDetailView,
-    SystemSettingsView
+    SystemSettingsView,
+    PromptTemplateListView, PromptTemplateDetailView
 )
 
 urlpatterns = [
@@ -22,4 +23,6 @@ urlpatterns = [
     path('prompts/<int:pk>/activate', SystemPromptActivateView.as_view()),
     path('images', KnowledgeImageListView.as_view()),
     path('images/<int:pk>', KnowledgeImageDetailView.as_view()),
+    path('templates', PromptTemplateListView.as_view()),
+    path('templates/<int:pk>', PromptTemplateDetailView.as_view()),
 ]

@@ -9,10 +9,10 @@
     <div class="login-card">
       <div class="login-header">
         <div class="logo-wrapper">
-          <img src="/avatar.png" alt="logo" class="login-logo" @error="e => e.target.src='https://api.dicebear.com/7.x/bottts/svg?seed=Enrollee&backgroundColor=6366f1'" />
+          <img :src="assistantAvatar || '/avatar.png'" alt="logo" class="login-logo" @error="e => e.target.src='https://api.dicebear.com/7.x/bottts/svg?seed=Enrollee&backgroundColor=6366f1'" />
         </div>
         <h2>后台管理系统</h2>
-        <p>迎新智能助手管理平台</p>
+        <p>{{ assistantName || '迎新智能助手' }}管理平台</p>
       </div>
       
       <div class="login-form">
@@ -57,9 +57,12 @@ export default {
       password: '',
       errorMsg: '',
       loading: false,
+      assistantName: '',
+      assistantAvatar: '',
     }
   },
   async mounted() {
+    this.loadSystemConfig()
     try {
       const res = await fetch('/api/admin/check')
       const data = await res.json()
@@ -69,6 +72,16 @@ export default {
     } catch (e) {}
   },
   methods: {
+    async loadSystemConfig() {
+      try {
+        const res = await fetch('/api/config')
+        const data = await res.json()
+        if (res.ok) {
+          this.assistantName = data.assistant_name
+          this.assistantAvatar = data.assistant_avatar
+        }
+      } catch (e) {}
+    },
     async handleLogin() {
       if (!this.username || !this.password) {
         this.errorMsg = '请输入用户名和密码'

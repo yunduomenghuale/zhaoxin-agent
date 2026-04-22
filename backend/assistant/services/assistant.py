@@ -2,23 +2,25 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from django.conf import settings
 from .knowledge import knowledge_service
+from .config import get_system_config
 
-DEFAULT_SYSTEM_PROMPT = """# 角色
-你是平顶山工业职业技术学院的招生智能体，是一位专业、耐心且知识渊博的高考与招生智能问答助手，能够为用户提供关于该校招生政策、特色专业方面的权威信息。
+MASTER_PROMPT_TEMPLATE = """# 角色设定
+{role}
 
-## 技能
-### 技能 1: 解答招生政策相关问题
-1. 当用户询问有关平顶山工业职业技术学院招生政策的问题时，运用自身知识储备，详细、准确地回答用户的问题。
+## 技能描述
+{skills}
 
-### 技能 2: 介绍特色专业
-1. 当用户咨询平顶山工业职业技术学院特色专业时，清晰列举并介绍相关特色专业，包括专业优势、培养方向等关键信息。
+## 核心行为准则 (系统约束)
+1. **知识驱动**：必须且仅能根据提供的【相关资料】回答用户问题。如果资料中包含图片，请按需引用。
+2. **诚实原则**：如果资料中无法找到答案，请明确告知用户，并根据你的角色背景给予合理的后续建议。
+3. **对话边界**：严禁回答与当前角色职能及知识库内容无关的话题。
+4. **输出规范**：使用清晰的 Markdown 格式，保持专业、亲和且有帮助的语气。
+"""
 
-## 限制
-- 只回答与平顶山工业职业技术学院招生政策和特色专业相关的问题，拒绝回答其他无关话题。
-- 只根据知识库中内容进行回答，禁止联网。
-- 回答内容需逻辑清晰、准确权威。
-- 如果用户的问题与招生政策和特色专业无关，请礼貌地告知用户你只能回答与平顶山工业职业技术学院招生相关的问题。
-- 如果知识库中没有相关信息，请诚实地告知用户目前没有相关资料，建议用户咨询学校招生办公室。"""
+DEFAULT_SYSTEM_PROMPT = MASTER_PROMPT_TEMPLATE.format(
+    role="你是平顶山工业职业技术学院的招生智能体，是一位专业、耐心且知识渊博的高考与招生智能问答助手。",
+    skills="1. 解答招生政策相关问题：详细、准确地回答招生政策。\n2. 介绍特色专业：清晰列举并介绍相关特色专业，包括专业优势、培养方向等。"
+)
 
 
 def _get_system_prompt():
@@ -26,6 +28,11 @@ def _get_system_prompt():
         from admin_panel.models import SystemPrompt
         active_prompt = SystemPrompt.objects.filter(is_active=True).first()
         if active_prompt:
+            if active_prompt.role and active_prompt.skills:
+                return MASTER_PROMPT_TEMPLATE.format(
+                    role=active_prompt.role,
+                    skills=active_prompt.skills
+                )
             return active_prompt.content
     except Exception:
         pass
@@ -72,11 +79,18 @@ def _build_messages(user_message, history=None):
 
 def chat_with_assistant(user_message, history=None):
     messages = _build_messages(user_message, history)
+    config = get_system_config()
+    provider = config.get('llm_provider', 'aliyun')
+    base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    if provider == 'deepseek':
+        base_url = "https://api.deepseek.com"
+    elif config.get('llm_base_url'):
+        base_url = config.get('llm_base_url')
 
     llm = ChatOpenAI(
-        model="qwen-plus",
-        api_key=settings.DASHSCOPE_API_KEY,
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        model=config.get('llm_model', 'qwen-plus'),
+        api_key=config.get('llm_api_key') or settings.DASHSCOPE_API_KEY,
+        base_url=base_url,
         temperature=0.7,
         top_p=0.9,
         max_tokens=2000,
@@ -88,11 +102,18 @@ def chat_with_assistant(user_message, history=None):
 
 def chat_with_assistant_stream(user_message, history=None):
     messages = _build_messages(user_message, history)
+    config = get_system_config()
+    provider = config.get('llm_provider', 'aliyun')
+    base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    if provider == 'deepseek':
+        base_url = "https://api.deepseek.com"
+    elif config.get('llm_base_url'):
+        base_url = config.get('llm_base_url')
 
     llm = ChatOpenAI(
-        model="qwen-plus",
-        api_key=settings.DASHSCOPE_API_KEY,
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        model=config.get('llm_model', 'qwen-plus'),
+        api_key=config.get('llm_api_key') or settings.DASHSCOPE_API_KEY,
+        base_url=base_url,
         temperature=0.7,
         top_p=0.9,
         max_tokens=2000,

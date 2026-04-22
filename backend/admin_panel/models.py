@@ -29,7 +29,9 @@ class KnowledgeDocument(models.Model):
 
 class SystemPrompt(models.Model):
     name = models.CharField(max_length=100, verbose_name='提示词名称')
-    content = models.TextField(verbose_name='提示词内容')
+    role = models.TextField(blank=True, default='', verbose_name='角色设定')
+    skills = models.TextField(blank=True, default='', verbose_name='技能描述')
+    content = models.TextField(verbose_name='完整提示词（自动生成）', blank=True, default='')
     is_active = models.BooleanField(default=False, verbose_name='是否启用')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
@@ -56,3 +58,18 @@ class KnowledgeImage(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class PromptTemplate(models.Model):
+    name = models.CharField(max_length=100, verbose_name='模板名称')
+    role = models.TextField(verbose_name='角色设定模板')
+    skills = models.TextField(verbose_name='技能描述模板')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+
+    class Meta:
+        db_table = 'prompt_template'
+        verbose_name = '提示词模板'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name

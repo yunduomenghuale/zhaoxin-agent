@@ -6,7 +6,7 @@
         <span>后台管理</span>
       </div>
       <div class="admin-nav">
-        <div :class="['nav-item', activeTab === 'users' ? 'active' : '']" @click="activeTab = 'users'">
+        <div v-if="currentUser?.role === 'admin'" :class="['nav-item', activeTab === 'users' ? 'active' : '']" @click="activeTab = 'users'">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
           用户管理
         </div>
@@ -28,11 +28,11 @@
         </div>
         <div :class="['nav-item', activeTab === 'brand' ? 'active' : '']" @click="activeTab = 'brand'">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
-          品牌化配置
+          助手配置
         </div>
-        <div :class="['nav-item', activeTab === 'settings' ? 'active' : '']" @click="activeTab = 'settings'">
+        <div v-if="currentUser?.role === 'admin'" :class="['nav-item', activeTab === 'settings' ? 'active' : '']" @click="activeTab = 'settings'">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-          系统设置
+          大模型配置
         </div>
         <div class="sidebar-divider"></div>
         <div :class="['nav-item', activeTab === 'chat' ? 'active' : '']" @click="activeTab = 'chat'">
@@ -274,11 +274,17 @@
         </div>
 
         <div v-if="activeTab === 'prompts'" class="tab-content">
-          <div class="action-bar">
-            <button class="primary-btn" @click="showPromptForm = true; editingPrompt = null; promptForm = { name: '', content: '', is_active: false }">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              新增提示词
-            </button>
+          <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 12px;">
+              <button class="primary-btn" @click="showPromptForm = true; editingPrompt = null; promptForm = { name: '', role: '', skills: '', is_active: false }">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                新增提示词
+              </button>
+              <button v-if="currentUser?.role === 'admin'" class="secondary-btn" @click="showTemplateManager = true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                管理预设模板
+              </button>
+            </div>
           </div>
           <div class="data-table">
             <table>
@@ -296,7 +302,7 @@
                   <td>{{ p.updated_at }}</td>
                   <td class="action-cell">
                     <button v-if="!p.is_active" class="activate-btn" @click="activatePrompt(p.id)">激活</button>
-                    <button class="edit-btn" @click="editingPrompt = p; showPromptForm = true; promptForm = { name: p.name, content: p.content, is_active: p.is_active }; triggerAllAutoResize()">编辑</button>
+                    <button class="edit-btn" @click="editingPrompt = p; showPromptForm = true; promptForm = { name: p.name, role: p.role, skills: p.skills, is_active: p.is_active }; triggerAllAutoResize()">编辑</button>
                     <button class="delete-btn" @click="deletePrompt(p.id)">删除</button>
                   </td>
                 </tr>
@@ -307,14 +313,27 @@
 
           <div v-if="showPromptForm" class="modal-overlay" @click.self="showPromptForm = false">
             <div class="modal-card modal-card-lg">
-              <h3>{{ editingPrompt ? '编辑提示词' : '新增提示词' }}</h3>
+              <div class="form-header" style="margin-bottom: 24px;">
+                <h3 style="margin-bottom: 16px;">{{ editingPrompt ? '编辑提示词' : '新增提示词' }}</h3>
+                <div class="template-selector" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1; flex-wrap: wrap;">
+                  <span style="font-size: 13px; color: #64748b; font-weight: 600;">快速填入模板:</span>
+                  <button v-for="t in promptTemplates" :key="t.id" type="button" class="template-btn" @click="useLoadedTemplate(t)">
+                    {{ t.name }}
+                  </button>
+                  <button type="button" class="template-btn" @click="useTemplate('clear')" style="color: #ef4444;">✨ 清空</button>
+                </div>
+              </div>
               <div class="form-group">
                 <label>名称</label>
                 <input v-model="promptForm.name" type="text" placeholder="请输入提示词名称" />
               </div>
               <div class="form-group">
-                <label>内容</label>
-                <textarea v-model="promptForm.content" placeholder="请输入提示词内容" @input="autoResize" class="auto-height-textarea" style="min-height: 300px;"></textarea>
+                <label>角色设定 (例如：你是平顶山工业职业技术学院的就业助手...)</label>
+                <textarea v-model="promptForm.role" placeholder="描述助手的身份和语气" @input="autoResize" class="auto-height-textarea"></textarea>
+              </div>
+              <div class="form-group">
+                <label>技能描述 (例如：1. 提供简历优化建议；2. 汇总最新招聘信息...)</label>
+                <textarea v-model="promptForm.skills" placeholder="列出助手的主要功能和职责" @input="autoResize" class="auto-height-textarea"></textarea>
               </div>
               <div class="form-group">
                 <label>是否激活（激活后将作为当前使用的系统提示词）</label>
@@ -327,6 +346,68 @@
               <div class="modal-actions">
                 <button class="cancel-btn" @click="showPromptForm = false">取消</button>
                 <button class="primary-btn" @click="savePrompt">保存</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 模板管理弹窗 -->
+          <div v-if="showTemplateManager" class="modal-overlay" @click.self="showTemplateManager = false">
+            <div class="modal-card modal-card-lg" style="max-height: 80vh; overflow-y: auto;">
+              <div class="form-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h3>管理预设模板</h3>
+                <button class="primary-btn" @click="showTemplateForm = true; editingTemplate = null; templateForm = { name: '', role: '', skills: '' }">
+                  新增模板
+                </button>
+              </div>
+              <div class="data-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>模板名称</th>
+                      <th>预览 (角色/技能)</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="t in promptTemplates" :key="t.id">
+                      <td style="font-weight: 600;">{{ t.name }}</td>
+                      <td style="max-width: 300px; font-size: 12px; color: #64748b;">
+                        <div class="text-truncate">角色: {{ t.role }}</div>
+                        <div class="text-truncate">技能: {{ t.skills }}</div>
+                      </td>
+                      <td class="action-cell">
+                        <button class="edit-btn" @click="editingTemplate = t; showTemplateForm = true; templateForm = { name: t.name, role: t.role, skills: t.skills }">编辑</button>
+                        <button class="delete-btn" @click="deleteTemplate(t.id)">删除</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="modal-actions" style="margin-top: 24px;">
+                <button class="cancel-btn" @click="showTemplateManager = false">关闭</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 模板编辑弹窗 -->
+          <div v-if="showTemplateForm" class="modal-overlay" style="z-index: 1000;" @click.self="showTemplateForm = false">
+            <div class="modal-card">
+              <h3>{{ editingTemplate ? '编辑模板' : '新增模板' }}</h3>
+              <div class="form-group">
+                <label>模板名称</label>
+                <input v-model="templateForm.name" type="text" placeholder="例如：就业助手底座" />
+              </div>
+              <div class="form-group">
+                <label>预设角色设定</label>
+                <textarea v-model="templateForm.role" placeholder="请输入默认的角色设定" style="min-height: 100px;"></textarea>
+              </div>
+              <div class="form-group">
+                <label>预设技能描述</label>
+                <textarea v-model="templateForm.skills" placeholder="请输入默认的技能描述" style="min-height: 100px;"></textarea>
+              </div>
+              <div class="modal-actions">
+                <button class="cancel-btn" @click="showTemplateForm = false">取消</button>
+                <button class="primary-btn" @click="saveTemplate">保存模板</button>
               </div>
             </div>
           </div>
@@ -402,8 +483,8 @@
                   <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
                 </div>
                 <div>
-                  <h3>品牌形象设置</h3>
-                  <p>在这里自定义您招新助手的全站品牌视觉与基础信息</p>
+                  <h3>助手形象设置</h3>
+                  <p>在这里自定义您助手的全站形象与基础信息</p>
                 </div>
               </div>
 
@@ -449,7 +530,7 @@
 
               <div class="settings-footer">
                 <button class="beauty-save-btn" @click="saveSystemSettings" :disabled="loading">
-                  <span v-if="!loading">保存品牌配置</span>
+                  <span v-if="!loading">保存助手配置</span>
                   <div v-else class="btn-spinner"></div>
                 </button>
               </div>
@@ -458,19 +539,74 @@
         </div>
 
         <div v-if="activeTab === 'settings'" class="tab-content">
-          <div class="settings-container-beauty">
-            <div class="settings-main-card">
-              <div class="settings-header">
-                <div class="settings-header-icon">
-                  <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <div class="settings-centered-wrapper">
+            <div class="llm-config-card-premium">
+              <div class="llm-card-header">
+                <div class="llm-icon-glow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                  </svg>
                 </div>
-                <div>
-                  <h3>系统高级设置</h3>
-                  <p>配置系统底层参数与技术选项（即将推出）</p>
-                </div>
+                <h3>大模型引擎配置</h3>
+                <p>在此管理您的 AI 核心参数，支持多运营商切换</p>
               </div>
-              <div class="settings-grid" style="padding: 100px; text-align: center; color: var(--text-light); border-top: 1px solid #f1f5f9;">
-                暂无高级配置项
+              
+              <div class="llm-card-body">
+                <div class="config-section">
+                  <div class="section-title">运营商与模型</div>
+                  <div class="beauty-form-group" style="margin-bottom: 16px;">
+                    <label>模型运营商</label>
+                    <div class="select-modern">
+                      <select v-model="systemSettings.llm_provider">
+                        <option value="aliyun">阿里云 (DashScope)</option>
+                        <option value="deepseek">DeepSeek (深度求索)</option>
+                      </select>
+                      <div class="select-arrow">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="beauty-form-group">
+                    <label>模型选择</label>
+                    <div class="select-modern">
+                      <select v-model="systemSettings.llm_model">
+                        <template v-if="systemSettings.llm_provider === 'aliyun'">
+                          <option value="qwen-plus">通义千问 Qwen-Plus (推荐)</option>
+                          <option value="qwen-max">通义千问 Qwen-Max (最强)</option>
+                          <option value="qwen-turbo">通义千问 Qwen-Turbo (极速)</option>
+                        </template>
+                        <template v-else-if="systemSettings.llm_provider === 'deepseek'">
+                          <option value="deepseek-chat">DeepSeek-V3 (对话模型)</option>
+                          <option value="deepseek-reasoner">DeepSeek-R1 (推理模型)</option>
+                        </template>
+                      </select>
+                      <div class="select-arrow">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="config-divider"></div>
+
+                <div class="config-section">
+                  <div class="section-title">鉴权配置</div>
+                  <div class="beauty-form-group">
+                    <label>API Key</label>
+                    <div class="input-modern">
+                      <svg class="input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      <input v-model="systemSettings.llm_api_key" type="password" placeholder="请输入对应运营商的 API Key" />
+                    </div>
+                  </div>
+                </div>
+
+                <button class="llm-save-btn-premium" @click="saveSystemSettings" :disabled="loading">
+                  <span v-if="!loading">保存配置并应用</span>
+                  <div v-else class="btn-spinner"></div>
+                </button>
               </div>
             </div>
           </div>
@@ -519,7 +655,7 @@ export default {
   name: 'AdminDashboard',
   data() {
     return {
-      activeTab: 'users',
+      activeTab: 'knowledge', // Set a safe default for both roles
       currentUser: null,
       users: [],
       knowledgeDocs: [],
@@ -539,7 +675,12 @@ export default {
       showImageForm: false,
       imageForm: { title: '', tags: '' },
       selectedImageFile: null,
-      promptForm: { name: '', content: '', is_active: false },
+      promptTemplates: [],
+      showTemplateManager: false,
+      showTemplateForm: false,
+      editingTemplate: null,
+      templateForm: { name: '', role: '', skills: '' },
+      promptForm: { name: '', role: '', skills: '', is_active: false },
       formError: '',
       chatMessages: [],
       chatInput: '',
@@ -551,14 +692,17 @@ export default {
         system_subtitle: '',
         system_footer: '',
         welcome_questions: [],
-        system_greeting: ''
+        system_greeting: '',
+        llm_model: 'qwen-plus',
+        llm_api_key: '',
+        llm_provider: 'aliyun'
       },
       selectedAvatarFile: null,
     }
   },
   computed: {
     tabTitle() {
-      const titles = { users: '用户管理', knowledge: '知识库管理', images: '媒体库管理', prompts: '提示词管理', questions: '对话管理', brand: '品牌化配置', chat: '对话测试', settings: '系统设置' }
+      const titles = { users: '用户管理', knowledge: '知识库管理', images: '媒体库管理', prompts: '提示词管理', questions: '对话管理', brand: '助手配置', chat: '对话测试', settings: '大模型配置' }
       return titles[this.activeTab] || ''
     },
   },
@@ -566,6 +710,11 @@ export default {
     activeTab(val) {
       if (['questions', 'brand', 'knowledge', 'prompts'].includes(val)) {
         this.triggerAllAutoResize()
+      }
+    },
+    showPromptForm(val) {
+      if (val) {
+        this.triggerAllAutoResize();
       }
     }
   },
@@ -575,6 +724,7 @@ export default {
     await this.loadKnowledge()
     await this.loadImages()
     await this.loadPrompts()
+    await this.loadPromptTemplates()
     await this.loadSystemSettings()
   },
   methods: {
@@ -587,6 +737,10 @@ export default {
           return
         }
         this.currentUser = data.user
+        // If user is editor, redirect away from admin-only tabs
+        if (this.currentUser.role !== 'admin' && ['users', 'settings'].includes(this.activeTab)) {
+          this.activeTab = 'knowledge'
+        }
       } catch (e) {
         this.$router.push('/admin/login')
       }
@@ -723,6 +877,9 @@ export default {
         if (this.selectedAvatarFile) {
           formData.append('assistant_avatar', this.selectedAvatarFile)
         }
+        formData.append('llm_model', this.systemSettings.llm_model)
+        formData.append('llm_api_key', this.systemSettings.llm_api_key)
+        formData.append('llm_provider', this.systemSettings.llm_provider)
         
         const res = await fetch('/api/admin/settings', {
           method: 'POST',
@@ -844,8 +1001,8 @@ export default {
     },
     async savePrompt() {
       this.formError = ''
-      if (!this.promptForm.name || !this.promptForm.content) {
-        this.formError = '请输入名称和内容'
+      if (!this.promptForm.name || !this.promptForm.role || !this.promptForm.skills) {
+        this.formError = '请输入名称、角色设定和技能描述'
         return
       }
 
@@ -881,11 +1038,66 @@ export default {
       el.style.height = 'auto';
       el.style.height = el.scrollHeight + 'px';
     },
+    useTemplate(type) {
+      if (type === 'clear') {
+        this.promptForm.role = ""
+        this.promptForm.skills = ""
+        this.promptForm.name = ""
+      }
+      this.triggerAllAutoResize()
+    },
+    useLoadedTemplate(t) {
+      this.promptForm.role = t.role
+      this.promptForm.skills = t.skills
+      if (!this.promptForm.name) this.promptForm.name = t.name
+      this.triggerAllAutoResize()
+    },
+    async loadPromptTemplates() {
+      try {
+        const res = await fetch('/api/admin/templates')
+        const data = await res.json()
+        if (res.ok) this.promptTemplates = data.templates
+      } catch (e) {}
+    },
+    async saveTemplate() {
+      if (!this.templateForm.name || !this.templateForm.role || !this.templateForm.skills) {
+        alert('请完整填写模板内容')
+        return
+      }
+      try {
+        let res
+        if (this.editingTemplate) {
+          res = await fetch(`/api/admin/templates/${this.editingTemplate.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.templateForm)
+          })
+        } else {
+          res = await fetch('/api/admin/templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.templateForm)
+          })
+        }
+        if (res.ok) {
+          this.showTemplateForm = false
+          await this.loadPromptTemplates()
+        }
+      } catch (e) {}
+    },
+    async deleteTemplate(id) {
+      if (!confirm('确定删除该模板？')) return
+      try {
+        const res = await fetch(`/api/admin/templates/${id}`, { method: 'DELETE' })
+        if (res.ok) await this.loadPromptTemplates()
+      } catch (e) {}
+    },
     triggerAllAutoResize() {
-      this.$nextTick(() => {
+      // Use a slightly longer delay to ensure the modal animation is underway/DOM is fully stable
+      setTimeout(() => {
         const textareas = document.querySelectorAll('.auto-height-textarea');
-        textareas.forEach(ta => this.autoResize(ta));
-      });
+        textareas.forEach(el => this.autoResize({ target: el }));
+      }, 100);
     },
     async deletePrompt(id) {
       if (!confirm('确定删除该提示词？')) return
@@ -2182,5 +2394,204 @@ tr:hover td {
   resize: none;
   min-height: 46px;
   line-height: 1.6;
+}
+
+/* LLM Config Premium Styles */
+.settings-centered-wrapper {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  padding: 40px;
+}
+
+.llm-config-card-premium {
+  width: 100%;
+  max-width: 500px;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  animation: cardFadeIn 0.5s ease-out;
+}
+
+@keyframes cardFadeIn {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.llm-card-header {
+  padding: 40px 40px 20px;
+  text-align: center;
+}
+
+.llm-icon-glow {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, var(--primary), #818cf8);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  color: white;
+  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
+}
+
+.llm-card-header h3 {
+  font-size: 22px;
+  color: #1e293b;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.llm-card-header p {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.llm-card-body {
+  padding: 20px 40px 40px;
+}
+
+.config-section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+}
+
+.template-selector {
+  margin-top: 12px;
+}
+
+.template-btn {
+  padding: 6px 14px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.template-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #f5f3ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+.auto-height-textarea {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none !important;
+  overflow-y: hidden;
+  transition: all 0.2s;
+  background: #f8fafc;
+  color: #334155;
+}
+
+.auto-height-textarea:focus {
+  background: white;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+  outline: none;
+}
+
+.select-modern, .input-modern {
+  position: relative;
+  width: 100%;
+}
+
+.select-modern select, .input-modern input {
+  width: 100%;
+  padding: 12px 16px;
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 15px;
+  color: #334155;
+  transition: all 0.2s;
+  outline: none;
+  appearance: none;
+}
+
+.input-modern input {
+  padding-left: 40px;
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #64748b;
+}
+
+.select-modern select:focus, .input-modern input:focus {
+  background: white !important;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+
+.config-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 24px 0;
+}
+
+.llm-save-btn-premium {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--primary), #4f46e5);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.2);
+  margin-top: 10px;
+}
+
+.llm-save-btn-premium:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 25px rgba(79, 70, 229, 0.3);
+}
+
+.llm-save-btn-premium:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

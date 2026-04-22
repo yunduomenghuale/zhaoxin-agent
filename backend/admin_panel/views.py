@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from langchain_community.document_loaders import Docx2txtLoader
-from .models import AdminUser, KnowledgeDocument, SystemPrompt, KnowledgeImage
+from .models import AdminUser, KnowledgeDocument, SystemPrompt, KnowledgeImage, PromptTemplate
 from assistant.services.knowledge import knowledge_service
 
 
@@ -88,6 +88,10 @@ class AdminUserListView(APIView):
     def get(self, request):
         if not _check_login(request):
             return Response({'error': '未登录'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        user = _get_current_user(request)
+        if user.role != 'admin':
+            return Response({'error': '权限不足，仅管理员可管理用户'}, status=status.HTTP_403_FORBIDDEN)
 
         users = AdminUser.objects.all()
         data = []
@@ -104,6 +108,10 @@ class AdminUserListView(APIView):
     def post(self, request):
         if not _check_login(request):
             return Response({'error': '未登录'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = _get_current_user(request)
+        if user.role != 'admin':
+            return Response({'error': '权限不足，仅管理员可创建用户'}, status=status.HTTP_403_FORBIDDEN)
 
         username = request.data.get('username', '')
         password = request.data.get('password', '')
@@ -132,6 +140,10 @@ class AdminUserDetailView(APIView):
     def put(self, request, pk):
         if not _check_login(request):
             return Response({'error': '未登录'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        current_user = _get_current_user(request)
+        if current_user.role != 'admin':
+            return Response({'error': '权限不足'}, status=status.HTTP_403_FORBIDDEN)
 
         try:
             user = AdminUser.objects.get(pk=pk)
@@ -162,6 +174,9 @@ class AdminUserDetailView(APIView):
             return Response({'error': '未登录'}, status=status.HTTP_401_UNAUTHORIZED)
 
         current_user = _get_current_user(request)
+        if current_user.role != 'admin':
+            return Response({'error': '权限不足'}, status=status.HTTP_403_FORBIDDEN)
+
         if current_user and current_user.id == pk:
             return Response({'error': '不能删除当前登录用户'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -340,13 +355,15 @@ class SystemPromptListView(APIView):
     def get(self, request):
         if not _check_login(request):
             return Response({'error': '未登录'}, status=status.HTTP_401_UNAUTHORIZED)
-
+        
         prompts = SystemPrompt.objects.all()
         data = []
         for p in prompts:
             data.append({
                 'id': p.id,
                 'name': p.name,
+                'role': p.role,
+                'skills': p.skills,
                 'content': p.content,
                 'is_active': p.is_active,
                 'created_at': p.created_at.strftime('%Y-%m-%d %H:%M'),
@@ -359,25 +376,28 @@ class SystemPromptListView(APIView):
             return Response({'error': '未登录'}, status=status.HTTP_401_UNAUTHORIZED)
 
         name = request.data.get('name', '')
-        content = request.data.get('content', '')
+        role = request.data.get('role', '')
+        skills = request.data.get('skills', '')
         is_active = request.data.get('is_active', False)
 
-        if not name or not content:
-            return Response({'error': '请输入名称和内容'}, status=status.HTTP_400_BAD_REQUEST)
+        if not name:
+            return Response({'error': '请输入名称'}, status=status.HTTP_400_BAD_REQUEST)
 
         if is_active:
             SystemPrompt.objects.filter(is_active=True).update(is_active=False)
 
         prompt = SystemPrompt.objects.create(
             name=name,
-            content=content,
+            role=role,
+            skills=skills,
             is_active=is_active,
         )
         return Response({
             'prompt': {
                 'id': prompt.id,
                 'name': prompt.name,
-                'content': prompt.content,
+                'role': prompt.role,
+                'skills': prompt.skills,
                 'is_active': prompt.is_active,
                 'created_at': prompt.created_at.strftime('%Y-%m-%d %H:%M'),
             }
@@ -398,7 +418,8 @@ class SystemPromptDetailView(APIView):
             return Response({'error': '提示词不存在'}, status=status.HTTP_404_NOT_FOUND)
 
         prompt.name = request.data.get('name', prompt.name)
-        prompt.content = request.data.get('content', prompt.content)
+        prompt.role = request.data.get('role', prompt.role)
+        prompt.skills = request.data.get('skills', prompt.skills)
         is_active = request.data.get('is_active', prompt.is_active)
 
         if is_active and not prompt.is_active:
@@ -411,7 +432,8 @@ class SystemPromptDetailView(APIView):
             'prompt': {
                 'id': prompt.id,
                 'name': prompt.name,
-                'content': prompt.content,
+                'role': prompt.role,
+                'skills': prompt.skills,
                 'is_active': prompt.is_active,
                 'updated_at': prompt.updated_at.strftime('%Y-%m-%d %H:%M'),
             }
@@ -537,6 +559,10 @@ class SystemSettingsView(APIView):
         if not _check_login(request):
             return Response({'error': '未登录'}, status=status.HTTP_401_UNAUTHORIZED)
         
+        user = _get_current_user(request)
+        if user.role != 'admin':
+            return Response({'error': '权限不足，仅管理员可修改系统设置'}, status=status.HTTP_403_FORBIDDEN)
+
         name = request.data.get('assistant_name')
         subtitle = request.data.get('assistant_subtitle')
         footer = request.data.get('assistant_footer')
@@ -562,8 +588,109 @@ class SystemSettingsView(APIView):
             avatar_url = settings.MEDIA_URL + path
             
         from assistant.services.config import update_system_config
-        config = update_system_config(name=name, avatar_url=avatar_url, subtitle=subtitle, footer=footer, welcome_questions=welcome_questions, greeting=greeting)
+        config = update_system_config(
+            name=name, 
+            avatar_url=avatar_url, 
+            subtitle=subtitle, 
+            footer=footer, 
+            welcome_questions=welcome_questions, 
+            greeting=greeting,
+            llm_model=request.data.get('llm_model'),
+            llm_api_key=request.data.get('llm_api_key'),
+            llm_provider=request.data.get('llm_provider'),
+            llm_base_url=request.data.get('llm_base_url')
+        )
         # Make avatar URL absolute for immediate frontend update
         if config['assistant_avatar'] and config['assistant_avatar'].startswith('/media/'):
              config['assistant_avatar'] = request.build_absolute_uri(config['assistant_avatar'])
         return Response(config)
+
+
+class PromptTemplateListView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        if not _check_login(request):
+            return Response({'error': '未登录'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        templates = PromptTemplate.objects.all()
+        data = []
+        for t in templates:
+            data.append({
+                'id': t.id,
+                'name': t.name,
+                'role': t.role,
+                'skills': t.skills,
+                'created_at': t.created_at.strftime('%Y-%m-%d %H:%M'),
+            })
+        return Response({'templates': data})
+
+    def post(self, request):
+        if not _check_login(request):
+            return Response({'error': '未登录'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = _get_current_user(request)
+        if user.role != 'admin':
+            return Response({'error': '权限不足，仅管理员可创建模板'}, status=status.HTTP_403_FORBIDDEN)
+
+        name = request.data.get('name', '')
+        role = request.data.get('role', '')
+        skills = request.data.get('skills', '')
+
+        if not name or not role or not skills:
+            return Response({'error': '名称、角色设定和技能描述均为必填项'}, status=status.HTTP_400_BAD_REQUEST)
+
+        template = PromptTemplate.objects.create(
+            name=name,
+            role=role,
+            skills=skills
+        )
+        return Response({
+            'template': {
+                'id': template.id,
+                'name': template.name,
+                'role': template.role,
+                'skills': template.skills,
+            }
+        })
+
+
+class PromptTemplateDetailView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def put(self, request, pk):
+        if not _check_login(request):
+            return Response({'error': '未登录'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = _get_current_user(request)
+        if user.role != 'admin':
+            return Response({'error': '权限不足'}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            template = PromptTemplate.objects.get(pk=pk)
+        except PromptTemplate.DoesNotExist:
+            return Response({'error': '模板不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        template.name = request.data.get('name', template.name)
+        template.role = request.data.get('role', template.role)
+        template.skills = request.data.get('skills', template.skills)
+        template.save()
+
+        return Response({'message': '更新成功'})
+
+    def delete(self, request, pk):
+        if not _check_login(request):
+            return Response({'error': '未登录'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = _get_current_user(request)
+        if user.role != 'admin':
+            return Response({'error': '权限不足'}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            template = PromptTemplate.objects.get(pk=pk)
+            template.delete()
+            return Response({'message': '模板已删除'})
+        except PromptTemplate.DoesNotExist:
+            return Response({'error': '模板不存在'}, status=status.HTTP_404_NOT_FOUND)
