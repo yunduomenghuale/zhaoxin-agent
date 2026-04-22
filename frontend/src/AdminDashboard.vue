@@ -151,7 +151,7 @@
           </div>
 
           <div v-if="showKnowledgeForm" class="modal-overlay" @click.self="showKnowledgeForm = false">
-            <div class="modal-card modal-card-lg">
+            <div class="modal-card modal-card-lg" style="max-height: 80vh; overflow-y: auto;">
               <h3>{{ editingDoc ? '编辑文档' : '上传并新增文档' }}</h3>
               
               <div v-if="!editingDoc" class="form-group">
@@ -185,7 +185,7 @@
 
               <div v-if="editingDoc" class="form-group">
                 <label>内容</label>
-                <textarea v-model="knowledgeForm.content" placeholder="请输入文档内容" @input="autoResize" class="auto-height-textarea" style="min-height: 200px;"></textarea>
+                <textarea v-model="knowledgeForm.content" placeholder="请输入文档内容" @input="autoResize" class="auto-height-textarea" style="min-height: 200px; max-height: 400px; overflow-y: auto;"></textarea>
               </div>
 
               <div class="form-group">
@@ -313,7 +313,7 @@
           </div>
 
           <div v-if="showPromptForm" class="modal-overlay" @click.self="showPromptForm = false">
-            <div class="modal-card modal-card-lg">
+            <div class="modal-card modal-card-lg" style="max-height: 80vh; overflow-y: auto;">
               <div class="form-header" style="margin-bottom: 24px;">
                 <h3 style="margin-bottom: 16px;">{{ editingPrompt ? '编辑提示词' : '新增提示词' }}</h3>
                 <div class="template-selector" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1; flex-wrap: wrap;">
@@ -1897,10 +1897,12 @@ tr:hover td {
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(8px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 1000;
   animation: fadeIn 0.3s ease;
+  overflow-y: auto;
+  padding: 40px 20px;
 }
 
 .modal-card {

@@ -52,3 +52,13 @@
 2026-04-22 21:51:51,905 [INFO] admin_panel.views: Admin admin updated user U1
 2026-04-22 21:51:57,269 [INFO] admin_panel.views: User U1 logged in from IP: 127.0.0.1
 2026-04-22 21:51:57,315 [WARNING] django.request: Forbidden: /api/admin/users
+2026-04-22 21:55:08,511 [INFO] admin_panel.views: User U1 logged in from IP: 127.0.0.1
+2026-04-22 21:55:08,556 [WARNING] django.request: Forbidden: /api/admin/users
+2026-04-22 21:58:25,299 [INFO] admin_panel.views: User admin logged in from IP: 127.0.0.1
+2026-04-22 22:00:50,247 [INFO] admin_panel.views: User admin logged in from IP: 127.0.0.1
+2026-04-22 22:01:01,412 [INFO] admin_panel.views: User U1 logged in from IP: 127.0.0.1
+2026-04-22 22:01:01,465 [WARNING] django.request: Forbidden: /api/admin/users
+2026-04-22 22:16:56,777 [INFO] django.utils.autoreload: C:\Users\云朵萌化了\Desktop\项目代码\招新智能体\backend\config\settings.py changed, reloading.
+2026-04-22 22:16:58,372 [INFO] django.utils.autoreload: Watching for file changes with StatReloader
+2026-04-22 22:17:03,262 [INFO] numexpr.utils: Note: NumExpr detected 24 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 16.
+2026-04-22 22:17:03,263 [INFO] numexpr.utils: NumExpr defaulting to 16 threads.
