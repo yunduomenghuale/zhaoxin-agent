@@ -290,17 +290,33 @@ export default {
           body: JSON.stringify({ message: text, history: historyBeforeSend }),
         })
         const data = await res.json()
-        const fullReply = data.reply || data.error || '抱歉，服务暂时不可用。'
-        
+
+        if (!res.ok) {
+          const errorMsg = data.error || '服务暂时不可用，请稍后再试。'
+          assistantMsg.content = errorMsg
+          if (!Array.isArray(chat.history)) chat.history = []
+          chat.history.push({ role: 'user', content: text })
+          chat.history.push({ role: 'assistant', content: errorMsg })
+          this.saveToStorage()
+          this.loading = false
+          this.isTyping = false
+          this.saveToStorage()
+          this.scrollToBottom()
+          return
+        }
+
+        const fullReply = data.reply || '抱歉，服务暂时不可用。'
+
         if (!Array.isArray(chat.history)) chat.history = []
         chat.history.push({ role: 'user', content: text })
         chat.history.push({ role: 'assistant', content: fullReply })
         this.saveToStorage()
-        
+
         await this.typeWriter(fullReply)
         assistantMsg.content = fullReply
-      } catch (e) { 
-        assistantMsg.content = '网络连接失败，请稍后再试。'
+      } catch (e) {
+        console.error('Send message error:', e)
+        assistantMsg.content = '网络连接失败，请检查网络后重试。'
         if (!Array.isArray(chat.history)) chat.history = []
         chat.history.push({ role: 'user', content: text })
         chat.history.push({ role: 'assistant', content: assistantMsg.content })

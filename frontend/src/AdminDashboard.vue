@@ -173,7 +173,7 @@
                         {{ selectedFile.name }}
                       </span>
                     </div>
-                    <div class="file-tip">支持 .docx, .txt 格式文档</div>
+                    <div class="file-tip">支持 .docx, .txt 格式，单个文件不超过 10MB</div>
                   </div>
                 </div>
               </div>
@@ -250,6 +250,7 @@
                       <span v-if="!selectedImageFile">点击选择图片</span>
                       <span v-else class="selected-filename">{{ selectedImageFile.name }}</span>
                     </div>
+                    <div class="file-tip">支持 jpg, png, gif, webp 格式，单个文件不超过 10MB</div>
                   </div>
                 </div>
               </div>
@@ -523,7 +524,7 @@
                       </div>
                     </div>
                     <input type="file" ref="avatarInput" @change="handleAvatarUpload" accept="image/*" class="hidden-input" />
-                    <div class="upload-hint">建议尺寸 200x200，支持 JPG, PNG</div>
+                    <div class="upload-hint">建议尺寸 200x200，支持 JPG, PNG, GIF, WebP，不超过 5MB</div>
                   </div>
                 </div>
               </div>
@@ -749,28 +750,66 @@ export default {
       try {
         const res = await fetch('/api/admin/users')
         const data = await res.json()
-        if (res.ok) this.users = data.users
-      } catch (e) {}
+        if (res.ok) {
+          this.users = data.users
+        } else if (res.status === 401 || res.status === 403) {
+          this.$router.push('/admin/login')
+        }
+      } catch (e) {
+        console.error('Load users error:', e)
+      }
     },
     async loadKnowledge() {
       try {
         const url = this.knowledgeKeyword ? `/api/admin/knowledge?keyword=${encodeURIComponent(this.knowledgeKeyword)}` : '/api/admin/knowledge'
         const res = await fetch(url)
         const data = await res.json()
-        if (res.ok) this.knowledgeDocs = data.documents
-      } catch (e) {}
+        if (res.ok) {
+          this.knowledgeDocs = data.documents
+        } else if (res.status === 401 || res.status === 403) {
+          this.$router.push('/admin/login')
+        }
+      } catch (e) {
+        console.error('Load knowledge error:', e)
+      }
     },
     async loadImages() {
       try {
         const res = await fetch('/api/admin/images')
         const data = await res.json()
-        if (res.ok) this.images = data.images
-      } catch (e) {}
+        if (res.ok) {
+          this.images = data.images
+        } else if (res.status === 401 || res.status === 403) {
+          this.$router.push('/admin/login')
+        }
+      } catch (e) {
+        console.error('Load images error:', e)
+      }
     },
     handleImageFileUpload(e) {
-      this.selectedImageFile = e.target.files[0]
-      if (this.selectedImageFile && !this.imageForm.title) {
-        const name = this.selectedImageFile.name
+      const file = e.target.files[0]
+      if (!file) return
+
+      // 检查文件大小（10MB）
+      const maxSize = 10 * 1024 * 1024
+      if (file.size > maxSize) {
+        alert('图片大小超过 10MB 限制')
+        e.target.value = ''
+        return
+      }
+
+      // 检查文件类型
+      const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+      const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+      if (!allowedExts.includes(ext)) {
+        alert('不支持的图片格式，仅支持 jpg、jpeg、png、gif、webp')
+        e.target.value = ''
+        return
+      }
+
+      this.selectedImageFile = file
+      if (!this.imageForm.title) {
+        const name = file.name
         this.imageForm.title = name.substring(0, name.lastIndexOf('.')) || name
       }
     },
@@ -810,15 +849,28 @@ export default {
       if (!confirm('确定删除该图片？')) return
       try {
         const res = await fetch(`/api/admin/images/${id}`, { method: 'DELETE' })
-        if (res.ok) await this.loadImages()
-      } catch (e) {}
+        if (res.ok) {
+          await this.loadImages()
+        } else {
+          const data = await res.json().catch(() => ({}))
+          alert(data.error || '删除失败')
+        }
+      } catch (e) {
+        alert('网络连接失败，请重试')
+      }
     },
     async loadPrompts() {
       try {
         const res = await fetch('/api/admin/prompts')
         const data = await res.json()
-        if (res.ok) this.prompts = data.prompts
-      } catch (e) {}
+        if (res.ok) {
+          this.prompts = data.prompts
+        } else if (res.status === 401 || res.status === 403) {
+          this.$router.push('/admin/login')
+        }
+      } catch (e) {
+        console.error('Load prompts error:', e)
+      }
     },
     async loadSystemSettings() {
       try {
@@ -835,8 +887,12 @@ export default {
           this.systemSettings = data
           this.updateFavicon()
           this.triggerAllAutoResize()
+        } else if (res.status === 401 || res.status === 403) {
+          this.$router.push('/admin/login')
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('Load settings error:', e)
+      }
     },
     updateFavicon() {
       if (this.systemSettings.assistant_avatar) {
@@ -851,15 +907,32 @@ export default {
     },
     handleAvatarUpload(e) {
       const file = e.target.files[0]
-      if (file) {
-        this.selectedAvatarFile = file
-        // Preview
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          this.systemSettings.assistant_avatar = e.target.result
-        }
-        reader.readAsDataURL(file)
+      if (!file) return
+
+      // 检查文件大小（5MB）
+      const maxSize = 5 * 1024 * 1024
+      if (file.size > maxSize) {
+        alert('头像图片大小超过 5MB 限制')
+        e.target.value = ''
+        return
       }
+
+      // 检查文件类型
+      const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+      const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+      if (!allowedExts.includes(ext)) {
+        alert('不支持的图片格式，仅支持 jpg、jpeg、png、gif、webp')
+        e.target.value = ''
+        return
+      }
+
+      this.selectedAvatarFile = file
+      // Preview
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        this.systemSettings.assistant_avatar = e.target.result
+      }
+      reader.readAsDataURL(file)
     },
     async saveSystemSettings() {
       this.loading = true
@@ -928,6 +1001,7 @@ export default {
         if (res.ok) {
           this.showUserForm = false
           await this.loadUsers()
+          alert(this.editingUser ? '用户修改成功' : '用户创建成功')
         } else {
           this.formError = data.error || '操作失败'
         }
@@ -939,14 +1013,40 @@ export default {
       if (!confirm('确定删除该用户？')) return
       try {
         const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
-        if (res.ok) await this.loadUsers()
-      } catch (e) {}
+        if (res.ok) {
+          await this.loadUsers()
+        } else {
+          const data = await res.json().catch(() => ({}))
+          alert(data.error || '删除失败')
+        }
+      } catch (e) {
+        alert('网络连接失败，请重试')
+      }
     },
     handleKnowledgeFileUpload(e) {
-      this.selectedFile = e.target.files[0]
-      if (this.selectedFile && !this.knowledgeForm.title) {
-        // Auto fill title with filename (without extension)
-        const name = this.selectedFile.name
+      const file = e.target.files[0]
+      if (!file) return
+
+      // 检查文件大小（10MB）
+      const maxSize = 10 * 1024 * 1024
+      if (file.size > maxSize) {
+        alert('文件大小超过 10MB 限制')
+        e.target.value = ''
+        return
+      }
+
+      // 检查文件类型
+      const allowedExts = ['.docx', '.txt']
+      const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+      if (!allowedExts.includes(ext)) {
+        alert('不支持的文件类型，仅支持 .docx 和 .txt')
+        e.target.value = ''
+        return
+      }
+
+      this.selectedFile = file
+      if (!this.knowledgeForm.title) {
+        const name = file.name
         this.knowledgeForm.title = name.substring(0, name.lastIndexOf('.')) || name
       }
     },
@@ -996,8 +1096,15 @@ export default {
       if (!confirm('确定删除该文档？')) return
       try {
         const res = await fetch(`/api/admin/knowledge/${id}`, { method: 'DELETE' })
-        if (res.ok) await this.loadKnowledge()
-      } catch (e) {}
+        if (res.ok) {
+          await this.loadKnowledge()
+        } else {
+          const data = await res.json().catch(() => ({}))
+          alert(data.error || '删除失败')
+        }
+      } catch (e) {
+        alert('网络连接失败，请重试')
+      }
     },
     async savePrompt() {
       this.formError = ''
@@ -1056,8 +1163,14 @@ export default {
       try {
         const res = await fetch('/api/admin/templates')
         const data = await res.json()
-        if (res.ok) this.promptTemplates = data.templates
-      } catch (e) {}
+        if (res.ok) {
+          this.promptTemplates = data.templates
+        } else if (res.status === 401 || res.status === 403) {
+          this.$router.push('/admin/login')
+        }
+      } catch (e) {
+        console.error('Load templates error:', e)
+      }
     },
     async saveTemplate() {
       if (!this.templateForm.name || !this.templateForm.role || !this.templateForm.skills) {
@@ -1089,8 +1202,15 @@ export default {
       if (!confirm('确定删除该模板？')) return
       try {
         const res = await fetch(`/api/admin/templates/${id}`, { method: 'DELETE' })
-        if (res.ok) await this.loadPromptTemplates()
-      } catch (e) {}
+        if (res.ok) {
+          await this.loadPromptTemplates()
+        } else {
+          const data = await res.json().catch(() => ({}))
+          alert(data.error || '删除失败')
+        }
+      } catch (e) {
+        alert('网络连接失败，请重试')
+      }
     },
     triggerAllAutoResize() {
       // Use a slightly longer delay to ensure the modal animation is underway/DOM is fully stable
@@ -1103,14 +1223,28 @@ export default {
       if (!confirm('确定删除该提示词？')) return
       try {
         const res = await fetch(`/api/admin/prompts/${id}`, { method: 'DELETE' })
-        if (res.ok) await this.loadPrompts()
-      } catch (e) {}
+        if (res.ok) {
+          await this.loadPrompts()
+        } else {
+          const data = await res.json().catch(() => ({}))
+          alert(data.error || '删除失败')
+        }
+      } catch (e) {
+        alert('网络连接失败，请重试')
+      }
     },
     async activatePrompt(id) {
       try {
         const res = await fetch(`/api/admin/prompts/${id}/activate`, { method: 'POST' })
-        if (res.ok) await this.loadPrompts()
-      } catch (e) {}
+        if (res.ok) {
+          await this.loadPrompts()
+        } else {
+          const data = await res.json().catch(() => ({}))
+          alert(data.error || '激活失败')
+        }
+      } catch (e) {
+        alert('网络连接失败，请重试')
+      }
     },
     renderChatContent(content) {
       if (!content) return ''
@@ -1150,10 +1284,14 @@ export default {
           }),
         })
         const data = await res.json()
-        let reply = data.reply || data.error || '服务暂时不可用'
-        this.chatMessages.push({ role: 'assistant', content: reply })
+        if (!res.ok) {
+          this.chatMessages.push({ role: 'assistant', content: data.error || '服务暂时不可用，请稍后再试。' })
+        } else {
+          this.chatMessages.push({ role: 'assistant', content: data.reply || '服务暂时不可用。' })
+        }
       } catch (e) {
-        this.chatMessages.push({ role: 'assistant', content: '网络连接出现问题' })
+        console.error('Chat test error:', e)
+        this.chatMessages.push({ role: 'assistant', content: '网络连接出现问题，请检查网络后重试。' })
       }
 
       this.chatLoading = false

@@ -1,4 +1,6 @@
 import json
+import logging
+import time
 from django.http import StreamingHttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -8,10 +10,36 @@ from rest_framework import status
 from .services.assistant import chat_with_assistant, chat_with_assistant_stream
 from .services.knowledge import knowledge_service
 
+logger = logging.getLogger(__name__)
+
 
 class HealthView(APIView):
     def get(self, request):
         return Response({'status': 'ok', 'message': '迎新智能助手服务运行正常'})
+
+
+def _get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        return x_forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '')
+
+
+class ChatRateLimiter:
+    _storage = {}
+    _window = 60
+    _max_requests = 30
+
+    @classmethod
+    def is_allowed(cls, key):
+        now = time.time()
+        if key not in cls._storage:
+            cls._storage[key] = []
+        cls._storage[key] = [t for t in cls._storage[key] if now - t < cls._window]
+        if len(cls._storage[key]) >= cls._max_requests:
+            return False
+        cls._storage[key].append(now)
+        return True
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -22,6 +50,14 @@ class ChatView(APIView):
     def post(self, request):
         message = request.data.get('message', '')
         history = request.data.get('history', [])
+        ip = _get_client_ip(request)
+
+        if not ChatRateLimiter.is_allowed(f'chat:{ip}'):
+            logger.warning(f'Chat rate limit exceeded for IP: {ip}')
+            return Response(
+                {'error': '请求过于频繁，请稍后再试'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
 
         if not message:
             return Response(
@@ -29,12 +65,17 @@ class ChatView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        if len(message) > 2000:
+            return Response(
+                {'error': '消息内容过长，请控制在 2000 字以内'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
             reply = chat_with_assistant(message, history)
             return Response({'reply': reply})
         except Exception as e:
-            import traceback
-            traceback.print_exc()
+            logger.error(f'Chat error for IP {ip}: {str(e)}', exc_info=True)
             return Response(
                 {'error': '服务暂时不可用，请稍后再试'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -62,10 +103,24 @@ class ChatStreamView(APIView):
     def post(self, request):
         message = request.data.get('message', '')
         history = request.data.get('history', [])
+        ip = _get_client_ip(request)
+
+        if not ChatRateLimiter.is_allowed(f'chat:{ip}'):
+            logger.warning(f'Chat stream rate limit exceeded for IP: {ip}')
+            return Response(
+                {'error': '请求过于频繁，请稍后再试'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
 
         if not message:
             return Response(
                 {'error': '请提供消息内容'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(message) > 2000:
+            return Response(
+                {'error': '消息内容过长，请控制在 2000 字以内'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -76,9 +131,8 @@ class ChatStreamView(APIView):
                     yield f"data: {data}\n\n"
                 yield f"data: {json.dumps({'done': True}, ensure_ascii=False)}\n\n"
             except Exception as e:
-                import traceback
-                traceback.print_exc()
-                error_data = json.dumps({'error': str(e)}, ensure_ascii=False)
+                logger.error(f'Chat stream error for IP {ip}: {str(e)}', exc_info=True)
+                error_data = json.dumps({'error': '服务暂时不可用，请稍后再试'}, ensure_ascii=False)
                 yield f"data: {error_data}\n\n"
 
         response = StreamingHttpResponse(

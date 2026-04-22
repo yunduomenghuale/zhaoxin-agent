@@ -1,6 +1,7 @@
 import time
 import os
 import tempfile
+import logging
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Q
@@ -10,6 +11,8 @@ from rest_framework import status
 from langchain_community.document_loaders import Docx2txtLoader
 from .models import AdminUser, KnowledgeDocument, SystemPrompt, KnowledgeImage, PromptTemplate
 from assistant.services.knowledge import knowledge_service
+
+logger = logging.getLogger(__name__)
 
 
 def _check_login(request):
@@ -26,6 +29,36 @@ def _get_current_user(request):
     return None
 
 
+def _get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        return x_forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '')
+
+
+class RateLimiter:
+    _storage = {}
+    _window = 60
+    _max_attempts = 5
+
+    @classmethod
+    def is_allowed(cls, key):
+        now = time.time()
+        if key not in cls._storage:
+            cls._storage[key] = []
+        cls._storage[key] = [t for t in cls._storage[key] if now - t < cls._window]
+        if len(cls._storage[key]) >= cls._max_attempts:
+            return False
+        cls._storage[key].append(now)
+        return True
+
+
+def _validate_password(password):
+    if len(password) < 6:
+        return '密码长度不能少于 6 位'
+    return None
+
+
 class AdminLoginView(APIView):
     authentication_classes = []
     permission_classes = []
@@ -33,16 +66,26 @@ class AdminLoginView(APIView):
     def post(self, request):
         username = request.data.get('username', '')
         password = request.data.get('password', '')
+        ip = _get_client_ip(request)
+
+        if not RateLimiter.is_allowed(f'login:{ip}'):
+            logger.warning(f'Login rate limit exceeded for IP: {ip}')
+            return Response({'error': '登录尝试过于频繁，请稍后再试'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
 
         if not username or not password:
             return Response({'error': '请输入用户名和密码'}, status=status.HTTP_400_BAD_REQUEST)
 
         user = authenticate(request, username=username, password=password)
         if user is None:
+            logger.warning(f'Failed login attempt for username: {username} from IP: {ip}')
             return Response({'error': '用户名或密码错误'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if not user.is_active:
+            return Response({'error': '该账号已被禁用'}, status=status.HTTP_403_FORBIDDEN)
 
         login(request, user)
         request.session['admin_user_id'] = user.id
+        logger.info(f'User {username} logged in from IP: {ip}')
 
         return Response({
             'user': {
@@ -120,15 +163,20 @@ class AdminUserListView(APIView):
         if not username or not password:
             return Response({'error': '请输入用户名和密码'}, status=status.HTTP_400_BAD_REQUEST)
 
+        pwd_error = _validate_password(password)
+        if pwd_error:
+            return Response({'error': pwd_error}, status=status.HTTP_400_BAD_REQUEST)
+
         if AdminUser.objects.filter(username=username).exists():
             return Response({'error': '用户名已存在'}, status=status.HTTP_400_BAD_REQUEST)
 
-        user = AdminUser.objects.create_user(username=username, password=password, role=role)
+        new_user = AdminUser.objects.create_user(username=username, password=password, role=role)
+        logger.info(f'Admin {user.username} created new user {username} with role {role}')
         return Response({
             'user': {
-                'id': user.id,
-                'username': user.username,
-                'role': user.role,
+                'id': new_user.id,
+                'username': new_user.username,
+                'role': new_user.role,
             }
         })
 
@@ -150,15 +198,33 @@ class AdminUserDetailView(APIView):
         except AdminUser.DoesNotExist:
             return Response({'error': '用户不存在'}, status=status.HTTP_404_NOT_FOUND)
 
+        username = request.data.get('username', '').strip()
         new_password = request.data.get('password', '')
         role = request.data.get('role', user.role)
-        is_active = request.data.get('is_active', user.is_active)
+        is_active_raw = request.data.get('is_active', user.is_active)
+        # 处理字符串类型的布尔值（前端 select 可能传递字符串）
+        if isinstance(is_active_raw, str):
+            is_active = is_active_raw.lower() in ('true', '1', 'yes', 'on')
+        else:
+            is_active = bool(is_active_raw)
+
+        if not username:
+            return Response({'error': '用户名不能为空'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 检查用户名是否被其他用户使用
+        if username != user.username and AdminUser.objects.filter(username=username).exists():
+            return Response({'error': '用户名已存在'}, status=status.HTTP_400_BAD_REQUEST)
 
         if new_password:
+            pwd_error = _validate_password(new_password)
+            if pwd_error:
+                return Response({'error': pwd_error}, status=status.HTTP_400_BAD_REQUEST)
             user.set_password(new_password)
+        user.username = username
         user.role = role
         user.is_active = is_active
         user.save()
+        logger.info(f'Admin {current_user.username} updated user {user.username}')
 
         return Response({
             'user': {
@@ -182,7 +248,9 @@ class AdminUserDetailView(APIView):
 
         try:
             user = AdminUser.objects.get(pk=pk)
+            username = user.username
             user.delete()
+            logger.info(f'Admin {current_user.username} deleted user {username}')
             return Response({'message': '用户已删除'})
         except AdminUser.DoesNotExist:
             return Response({'error': '用户不存在'}, status=status.HTTP_404_NOT_FOUND)
@@ -218,6 +286,14 @@ class KnowledgeDocumentListView(APIView):
         if not _check_login(request):
             return Response({'error': '未登录'}, status=status.HTTP_401_UNAUTHORIZED)
 
+        # 检查文档数量上限
+        current_count = KnowledgeDocument.objects.count()
+        if current_count >= settings.MAX_KNOWLEDGE_DOCS:
+            return Response(
+                {'error': f'知识库文档数量已达上限（{settings.MAX_KNOWLEDGE_DOCS} 篇），请先删除部分文档后再上传'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         file_obj = request.FILES.get('file')
         title = request.data.get('title', '')
         is_active = request.data.get('is_active', 'true').lower() == 'true'
@@ -225,9 +301,23 @@ class KnowledgeDocumentListView(APIView):
         if not file_obj:
             return Response({'error': '请选择要上传的文件'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # 检查文件大小
+        if file_obj.size > settings.MAX_UPLOAD_SIZE:
+            return Response(
+                {'error': f'文件大小超过限制（最大 {settings.MAX_UPLOAD_SIZE_MB}MB）'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         filename = file_obj.name
         ext = os.path.splitext(filename)[1].lower()
-        
+
+        # 检查文件扩展名
+        if ext not in settings.ALLOWED_UPLOAD_EXTENSIONS:
+            return Response(
+                {'error': f'不支持的文件类型，仅支持 {", ".join(settings.ALLOWED_UPLOAD_EXTENSIONS)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         if not title:
             title = filename
 
@@ -238,7 +328,7 @@ class KnowledgeDocumentListView(APIView):
                     for chunk in file_obj.chunks():
                         tmp.write(chunk)
                     tmp_path = tmp.name
-                
+
                 try:
                     loader = Docx2txtLoader(tmp_path)
                     docs = loader.load()
@@ -246,18 +336,23 @@ class KnowledgeDocumentListView(APIView):
                 finally:
                     if os.path.exists(tmp_path):
                         os.remove(tmp_path)
-            
+
             elif ext == '.txt':
                 content = file_obj.read().decode('utf-8')
-            
-            else:
-                return Response({'error': '不支持的文件类型，仅支持 .docx 和 .txt'}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            return Response({'error': f'解析文件失败: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f'Parse document failed: {str(e)}', exc_info=True)
+            return Response({'error': '解析文件失败，请检查文件格式是否正确'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         if not content.strip():
             return Response({'error': '文档内容为空'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 检查内容长度（防止超大文本）
+        if len(content) > 500000:
+            return Response(
+                {'error': '文档内容过长（超过 50 万字符），请拆分为多个文档上传'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         doc = KnowledgeDocument.objects.create(
             title=title,
@@ -265,10 +360,11 @@ class KnowledgeDocumentListView(APIView):
             source_file=filename,
             is_active=is_active,
         )
-        
+
         # 刷新知识库缓存
         knowledge_service.refresh()
-        
+        logger.info(f'User {_get_current_user(request).username} uploaded document: {filename} ({file_obj.size} bytes)')
+
         return Response({
             'document': {
                 'id': doc.id,
@@ -492,14 +588,37 @@ class KnowledgeImageListView(APIView):
     def post(self, request):
         if not _check_login(request):
             return Response({'error': '未登录'}, status=status.HTTP_401_UNAUTHORIZED)
-        
+
+        # 检查图片数量上限
+        current_count = KnowledgeImage.objects.count()
+        if current_count >= settings.MAX_KNOWLEDGE_IMAGES:
+            return Response(
+                {'error': f'知识库图片数量已达上限（{settings.MAX_KNOWLEDGE_IMAGES} 张），请先删除部分图片后再上传'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         title = request.data.get('title', '')
         image_file = request.FILES.get('image')
         tags = request.data.get('tags', '')
 
         if not image_file:
             return Response({'error': '请选择图片文件'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+        # 检查文件大小
+        if image_file.size > settings.MAX_UPLOAD_SIZE:
+            return Response(
+                {'error': f'图片大小超过限制（最大 {settings.MAX_UPLOAD_SIZE_MB}MB）'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 检查文件扩展名
+        ext = os.path.splitext(image_file.name)[1].lower()
+        if ext not in settings.ALLOWED_IMAGE_EXTENSIONS:
+            return Response(
+                {'error': f'不支持的图片格式，仅支持 {", ".join(settings.ALLOWED_IMAGE_EXTENSIONS)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         if not title:
             title = image_file.name
 
@@ -510,6 +629,7 @@ class KnowledgeImageListView(APIView):
         )
         # 刷新知识库缓存
         knowledge_service.refresh()
+        logger.info(f'User {_get_current_user(request).username} uploaded image: {image_file.name} ({image_file.size} bytes)')
         return Response({
             'image': {
                 'id': img.id,

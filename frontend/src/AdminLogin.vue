@@ -98,6 +98,8 @@ export default {
         const data = await res.json()
         if (res.ok && data.user) {
           this.$router.push('/admin')
+        } else if (res.status === 429) {
+          this.errorMsg = data.error || '登录尝试过于频繁，请稍后再试'
         } else {
           this.errorMsg = data.error || '登录信息有误，请重新输入'
         }

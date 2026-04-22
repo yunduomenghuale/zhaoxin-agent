@@ -1,0 +1,54 @@
+2026-04-22 21:12:50,885 [INFO] django.utils.autoreload: Watching for file changes with StatReloader
+2026-04-22 21:12:55,429 [INFO] numexpr.utils: Note: NumExpr detected 24 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 16.
+2026-04-22 21:12:55,429 [INFO] numexpr.utils: NumExpr defaulting to 16 threads.
+2026-04-22 21:13:21,750 [INFO] django.utils.autoreload: Watching for file changes with StatReloader
+2026-04-22 21:13:26,024 [INFO] numexpr.utils: Note: NumExpr detected 24 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 16.
+2026-04-22 21:13:26,025 [INFO] numexpr.utils: NumExpr defaulting to 16 threads.
+2026-04-22 21:13:30,741 [WARNING] django.security.SuspiciousSession: Session data corrupted
+2026-04-22 21:13:30,773 [INFO] admin_panel.views: User admin logged in from IP: 127.0.0.1
+2026-04-22 21:18:07,532 [INFO] django.utils.autoreload: C:\Users\云朵萌化了\Desktop\项目代码\招新智能体\backend\config\settings.py changed, reloading.
+2026-04-22 21:18:09,089 [INFO] django.utils.autoreload: Watching for file changes with StatReloader
+2026-04-22 21:18:13,664 [INFO] numexpr.utils: Note: NumExpr detected 24 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 16.
+2026-04-22 21:18:13,665 [INFO] numexpr.utils: NumExpr defaulting to 16 threads.
+2026-04-22 21:18:58,859 [INFO] django.utils.autoreload: C:\Users\云朵萌化了\Desktop\项目代码\招新智能体\backend\admin_panel\views.py changed, reloading.
+2026-04-22 21:19:00,300 [INFO] django.utils.autoreload: Watching for file changes with StatReloader
+2026-04-22 21:19:04,433 [INFO] numexpr.utils: Note: NumExpr detected 24 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 16.
+2026-04-22 21:19:04,434 [INFO] numexpr.utils: NumExpr defaulting to 16 threads.
+2026-04-22 21:19:23,695 [INFO] django.utils.autoreload: C:\Users\云朵萌化了\Desktop\项目代码\招新智能体\backend\admin_panel\views.py changed, reloading.
+2026-04-22 21:19:25,135 [INFO] django.utils.autoreload: Watching for file changes with StatReloader
+2026-04-22 21:19:29,484 [INFO] numexpr.utils: Note: NumExpr detected 24 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 16.
+2026-04-22 21:19:29,484 [INFO] numexpr.utils: NumExpr defaulting to 16 threads.
+2026-04-22 21:21:26,453 [INFO] django.utils.autoreload: C:\Users\云朵萌化了\Desktop\项目代码\招新智能体\backend\config\settings.py changed, reloading.
+2026-04-22 21:21:28,074 [INFO] django.utils.autoreload: Watching for file changes with StatReloader
+2026-04-22 21:21:32,712 [INFO] numexpr.utils: Note: NumExpr detected 24 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 16.
+2026-04-22 21:21:32,713 [INFO] numexpr.utils: NumExpr defaulting to 16 threads.
+2026-04-22 21:23:14,596 [INFO] admin_panel.views: User admin logged in from IP: 127.0.0.1
+2026-04-22 21:23:39,495 [INFO] admin_panel.views: Admin admin updated user admin
+2026-04-22 21:23:53,545 [INFO] admin_panel.views: Admin admin updated user admin2
+2026-04-22 21:23:59,270 [WARNING] admin_panel.views: Failed login attempt for username: U1 from IP: 127.0.0.1
+2026-04-22 21:23:59,274 [WARNING] django.request: Unauthorized: /api/admin/login
+2026-04-22 21:24:03,750 [WARNING] admin_panel.views: Failed login attempt for username: U1 from IP: 127.0.0.1
+2026-04-22 21:24:03,752 [WARNING] django.request: Unauthorized: /api/admin/login
+2026-04-22 21:24:06,757 [WARNING] admin_panel.views: Failed login attempt for username: U1 from IP: 127.0.0.1
+2026-04-22 21:24:06,758 [WARNING] django.request: Unauthorized: /api/admin/login
+2026-04-22 21:24:12,126 [WARNING] admin_panel.views: Failed login attempt for username: U1 from IP: 127.0.0.1
+2026-04-22 21:24:12,127 [WARNING] django.request: Unauthorized: /api/admin/login
+2026-04-22 21:24:14,820 [INFO] admin_panel.views: User admin logged in from IP: 127.0.0.1
+2026-04-22 21:24:26,287 [INFO] admin_panel.views: Admin admin updated user admin2
+2026-04-22 21:24:31,716 [INFO] admin_panel.views: Admin admin updated user admin2
+2026-04-22 21:26:51,380 [INFO] django.utils.autoreload: C:\Users\云朵萌化了\Desktop\项目代码\招新智能体\backend\admin_panel\views.py changed, reloading.
+2026-04-22 21:26:52,820 [INFO] django.utils.autoreload: Watching for file changes with StatReloader
+2026-04-22 21:26:56,923 [INFO] numexpr.utils: Note: NumExpr detected 24 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 16.
+2026-04-22 21:26:56,924 [INFO] numexpr.utils: NumExpr defaulting to 16 threads.
+2026-04-22 21:46:25,473 [INFO] admin_panel.views: Admin admin updated user admin2
+2026-04-22 21:48:16,122 [INFO] admin_panel.views: Admin admin updated user admin2
+2026-04-22 21:51:15,879 [INFO] django.utils.autoreload: C:\Users\云朵萌化了\Desktop\项目代码\招新智能体\backend\admin_panel\views.py changed, reloading.
+2026-04-22 21:51:17,338 [INFO] django.utils.autoreload: Watching for file changes with StatReloader
+2026-04-22 21:51:22,358 [INFO] numexpr.utils: Note: NumExpr detected 24 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 16.
+2026-04-22 21:51:22,358 [INFO] numexpr.utils: NumExpr defaulting to 16 threads.
+2026-04-22 21:51:33,548 [WARNING] admin_panel.views: Failed login attempt for username: U1 from IP: 127.0.0.1
+2026-04-22 21:51:33,550 [WARNING] django.request: Unauthorized: /api/admin/login
+2026-04-22 21:51:36,587 [INFO] admin_panel.views: User admin logged in from IP: 127.0.0.1
+2026-04-22 21:51:51,905 [INFO] admin_panel.views: Admin admin updated user U1
+2026-04-22 21:51:57,269 [INFO] admin_panel.views: User U1 logged in from IP: 127.0.0.1
+2026-04-22 21:51:57,315 [WARNING] django.request: Forbidden: /api/admin/users
